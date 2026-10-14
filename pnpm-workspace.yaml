@@ -1,4 +1,6 @@
 allowBuilds:
   '@swc/core': true
+  '@mongodb-js/zstd': true
   cbor-extract: true
   esbuild: true
+  node-liblzma: true

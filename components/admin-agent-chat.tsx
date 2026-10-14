@@ -33,9 +33,31 @@ const SUGGESTIONS = [
 export function AdminAgentChat() {
   const [input, setInput] = useState("");
 
+  const activeRunId =
+    typeof window !== "undefined"
+      ? (localStorage.getItem("active-admin-workflow-run-id") ?? undefined)
+      : undefined;
+
   const { messages, error, sendMessage } = useChat({
+    resume: Boolean(activeRunId),
     // we need to point to a different API route because this is a different agent
-    transport: new WorkflowChatTransport({ api: "/api/admin/chat" }),
+    transport: new WorkflowChatTransport({
+      api: "/api/admin/chat",
+      onChatSendMessage: (response) => {
+        const runId = response.headers.get("x-workflow-run-id");
+        if (runId) localStorage.setItem("active-admin-workflow-run-id", runId);
+      },
+      onChatEnd: () =>
+        localStorage.removeItem("active-admin-workflow-run-id"),
+      prepareReconnectToStreamRequest: ({ api, ...rest }) => {
+        const runId = localStorage.getItem("active-admin-workflow-run-id");
+        if (!runId) throw new Error("No active admin workflow run ID found");
+        return {
+          ...rest,
+          api: `/api/admin/chat/${encodeURIComponent(runId)}/stream`,
+        };
+      },
+    }),
   });
 
   const handleSubmit = (message: PromptInputMessage) => {
